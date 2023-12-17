@@ -4,11 +4,12 @@ pragma solidity ^0.8.7;
 import "@chainlink/contracts/src/v0.8/shared/access/ConfirmedOwner.sol";
 import "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
+import "@chainlink/contracts/src/v0.8.interfaces/KeeperCompatibleInterace.sol";
 
 error Lottery__NotEnoughETHEntered();
 error Lottery__TransferFailed();
 
-contract Lottery is VRFConsumerBaseV2{
+contract Lottery is VRFConsumerBaseV2, KeeperCompatibleInterface{
     // State Variables
     uint256 private immutable i_entranceFee;
     address payable[] private s_players;
@@ -21,6 +22,11 @@ contract Lottery is VRFConsumerBaseV2{
 
     // Lottery Variable
     address private s_recentWinner;
+    enum LotteryState {
+        OPEN,
+        CALCULATING
+    }
+    LotteryState private s_lotteryState;
 
     event LotteryEnter(address indexed player);
     event RequestedLotteryWinner(uint256 indexed requestId);
@@ -38,9 +44,16 @@ contract Lottery is VRFConsumerBaseV2{
         i_gasLane = gasLane;
         i_subscriptionId = subscriptionId;
         i_callbackGasLimit = callbackGasLimit;
+        s_lotteryState = LotteryState.OPEN;
     }
     
-    function pickRandomWinner() external {
+    function checkUpKeep(
+        bytes calldata /*checkData*/
+    ) external override {
+        
+    }
+
+    function requestRandomWinner() external {
         uint256 requestId = i_vrfCoordinator.requestRandomWords(
             i_gasLane, 
             i_subscriptionId,
