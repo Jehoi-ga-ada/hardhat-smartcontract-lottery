@@ -4,12 +4,18 @@ pragma solidity ^0.8.7;
 import "@chainlink/contracts/src/v0.8/shared/access/ConfirmedOwner.sol";
 import "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
-import "@chainlink/contracts/src/v0.8.interfaces/KeeperCompatibleInterace.sol";
 
 error Lottery__NotEnoughETHEntered();
 error Lottery__TransferFailed();
+error Lottery__NotOpen();
+error Loterry__UpkeepNotNeeded(uint256 currentBalance, uint256 numPlayers, uint256 lotteryState);
 
-contract Lottery is VRFConsumerBaseV2, KeeperCompatibleInterface{
+/** @title A sample Lotterry Contract
+ * @author Jehoiada Wong
+ * @notice this contract is for creating an untamperable decentralized smartcontract
+ * @dev this implements Chainlink VRF V2 and Chainlink Keepers
+ */
+contract Lottery is VRFConsumerBaseV2{
     // State Variables
     uint256 private immutable i_entranceFee;
     address payable[] private s_players;
@@ -27,17 +33,20 @@ contract Lottery is VRFConsumerBaseV2, KeeperCompatibleInterface{
         CALCULATING
     }
     LotteryState private s_lotteryState;
+    uint256 private s_lastTimeStamp;
+    uint256 private immutable i_interval;
 
     event LotteryEnter(address indexed player);
     event RequestedLotteryWinner(uint256 indexed requestId);
     event WinnerPicked(address indexed winner);
 
     constructor(
-        address vrfCordinatorV2, 
+        address vrfCordinatorV2, //contract address
         uint256 entranceFee, 
         bytes32 gasLane, 
         uint64 subscriptionId,
-        uint32 callbackGasLimit
+        uint32 callbackGasLimit,
+        uint256 interval
     ) VRFConsumerBaseV2(vrfCordinatorV2){
         i_entranceFee = entranceFee;
         i_vrfCoordinator = VRFCoordinatorV2Interface(vrfCordinatorV2);
@@ -45,15 +54,30 @@ contract Lottery is VRFConsumerBaseV2, KeeperCompatibleInterface{
         i_subscriptionId = subscriptionId;
         i_callbackGasLimit = callbackGasLimit;
         s_lotteryState = LotteryState.OPEN;
+        s_lastTimeStamp = block.timestamp;
+        i_interval = interval;
     }
     
     function checkUpKeep(
-        bytes calldata /*checkData*/
-    ) external override {
-        
-    }
+        bytes memory /*checkData*/
+    ) public view returns(bool upkeepNeeded, bytes memory /*performData*/){
+        bool isOpen = (LotteryState.OPEN == s_lotteryState);
+        bool timePassed = ((block.timestamp - s_lastTimeStamp) > i_interval);
+        bool hasPlayers = (s_players.length > 0);
+        bool hasBalance = address(this).balance > 0;
+        upkeepNeeded = (isOpen && timePassed && hasPlayers && hasBalance);
+        return (upkeepNeeded, "0x0");
+    }   
 
-    function requestRandomWinner() external {
+    function performUpKeep(bytes calldata /*performData*/) external {
+        (bool upkeepNeeded, ) = checkUpKeep("");
+        if(!upkeepNeeded) revert Loterry__UpkeepNotNeeded(
+            address(this).balance, 
+            s_players.length, 
+            uint256(s_lotteryState)
+        );
+
+        s_lotteryState = LotteryState.CALCULATING;
         uint256 requestId = i_vrfCoordinator.requestRandomWords(
             i_gasLane, 
             i_subscriptionId,
@@ -73,6 +97,9 @@ contract Lottery is VRFConsumerBaseV2, KeeperCompatibleInterface{
         uint256 indexOfWinner = randomWords[0] % s_players.length;
         address payable recentWinner = s_players[indexOfWinner];
         s_recentWinner = recentWinner;
+        s_lotteryState = LotteryState.OPEN;
+        s_players = new address payable[](0);
+        s_lastTimeStamp = block.timestamp;
         (bool success, ) = recentWinner.call{value: address(this).balance}("");
         if(!success){
             revert Lottery__TransferFailed();
@@ -84,10 +111,14 @@ contract Lottery is VRFConsumerBaseV2, KeeperCompatibleInterface{
         if(msg.value < i_entranceFee){ 
             revert Lottery__NotEnoughETHEntered();
         }
+        if(s_lotteryState != LotteryState.OPEN){
+            revert Lottery__NotOpen();
+        }
         s_players.push(payable(msg.sender));
         emit LotteryEnter(msg.sender);
     }
 
+    // View Function
     function getEntranceFee() public view returns (uint256){
         return i_entranceFee;
     }
@@ -98,5 +129,25 @@ contract Lottery is VRFConsumerBaseV2, KeeperCompatibleInterface{
 
     function getRecentWinner() public view returns (address) {
         return s_recentWinner;
+    }
+
+    function getLotteryState() public view returns (LotteryState) {
+        return s_lotteryState;
+    }
+
+    function getNumWords() public pure returns (uint256) {
+        return NUM_WORDS;
+    }
+
+    function getNumberOfPlayers() public view returns (uint256) {
+        return s_players.length;
+    }
+
+    function getLatestTimeStamp() public view returns (uint256) {
+        return s_lastTimeStamp;
+    }
+
+    function getRequestConfirmations() public pure returns (uint256) {
+        return REQUEST_CONFIRMATIONS;
     }
 }
