@@ -1,4 +1,5 @@
-require("@nomiclabs/hardhat-waffle")
+require("@nomicfoundation/hardhat-chai-matchers")
+require("@nomiclabs/hardhat-ethers")
 require("@nomiclabs/hardhat-etherscan")
 require("hardhat-deploy")
 require("solidity-coverage")
@@ -25,6 +26,12 @@ module.exports = {
       url: SEPOLIA_RPC_URL,
       accounts: [PRIVATE_KEY],
     }
+  },
+  gasReporter: {
+    enabled: false,
+    currency: "USD",
+    outputFile: "gas-report.txt",
+    noColors: true,
   },
   solidity: "0.8.7",
   namedAccounts: {
