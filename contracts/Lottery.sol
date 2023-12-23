@@ -8,7 +8,7 @@ import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 error Lottery__NotEnoughETHEntered();
 error Lottery__TransferFailed();
 error Lottery__NotOpen();
-error Loterry__UpkeepNotNeeded(uint256 currentBalance, uint256 numPlayers, uint256 lotteryState);
+error Lottery__UpKeepNotNeeded(uint256 currentBalance, uint256 numPlayers, uint256 lotteryState);
 
 /** @title A sample Lotterry Contract
  * @author Jehoiada Wong
@@ -71,7 +71,7 @@ contract Lottery is VRFConsumerBaseV2{
 
     function performUpKeep(bytes calldata /*performData*/) external {
         (bool upkeepNeeded, ) = checkUpKeep("");
-        if(!upkeepNeeded) revert Loterry__UpkeepNotNeeded(
+        if(!upkeepNeeded) revert Lottery__UpKeepNotNeeded(
             address(this).balance, 
             s_players.length, 
             uint256(s_lotteryState)
