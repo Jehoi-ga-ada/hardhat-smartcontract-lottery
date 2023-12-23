@@ -6,6 +6,7 @@ require("solidity-coverage")
 require("hardhat-gas-reporter")
 require("hardhat-contract-sizer")
 require("dotenv").config()
+require("mocha")
 
 const SEPOLIA_RPC_URL = process.env.SEPOLIA_RPC_URL
 const PRIVATE_KEY = process.env.PRIVATE_KEY
@@ -41,6 +42,9 @@ module.exports = {
     player: {
       default: 1,
     },
+  },
+  mocha: {
+    timeout: 200000 //200 seconds max
   }
 }
 
