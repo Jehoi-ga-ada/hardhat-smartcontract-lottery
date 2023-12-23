@@ -134,37 +134,45 @@ const { assert, expect } = require("chai")
                 const additionalEntrances = 3
                 const startingAccountIndex = 1
                 const accounts = await ethers.getSigners()
-                for(let i = startingAccountIndex; i < startingAccountIndex + additionalEntrances; i++) {
+                for(
+                    let i = startingAccountIndex; 
+                    i < startingAccountIndex + additionalEntrances; 
+                    i++
+                ) {
                     const accountConnectedLottery = lottery.connect(accounts[i])
                     await accountConnectedLottery.enterLottery({value: lotteryEntranceFee})
                 }
                 const startingTimeStamp = await lottery.getLatestTimeStamp()
                 await new Promise(async (resolve, reject) => {
-                    console.log("Promise initialized")
                     lottery.once("WinnerPicked", async () => {
-                        console.log("Found the event!")
+                        console.log("WinnerPicked event fired!")
                         try{          
-                            const recentWinner = await lottery.getRecentWinner()
-                            console.log(recentWinner)
-                            console.log(accounts[0].address)
-                            console.log(accounts[1].address)
-                            console.log(accounts[2].address)
-                            console.log(accounts[3].address)
+                            const recentWinner = await lottery.getRecentWinner() //index 1 is the winner
                             const lotteryState = await lottery.getLotteryState()
                             const endingTimeStamp = await lottery.getLatestTimeStamp()
                             const numPlayers = await lottery.getNumberOfPlayers()
+                            const winnerEndingBalance = await accounts[1].provider.getBalance(accounts[1].address)
                             assert.equal(numPlayers.toString(), "0")
                             assert.equal(lotteryState, 0)
                             assert(endingTimeStamp > startingTimeStamp)
+                            assert.equal(
+                                winnerEndingBalance,
+                                winnerStartingBalance+(
+                                    lotteryEntranceFee
+                                        *(BigInt(additionalEntrances))
+                                        +(lotteryEntranceFee)
+                                )
+                            )
+                            resolve()
                         } catch(e) {
                             console.log(e)
                             reject(e)
                         }
-                        resolve()
                     })
 
                     const tx = await lottery.performUpKeep("0x")
                     const txReceipt = await tx.wait(1)
+                    const winnerStartingBalance = await accounts[1].provider.getBalance(accounts[1].address)
                     await vrfCoordinatorV2Mock.fulfillRandomWords(
                         txReceipt.logs[1].args.requestId, 
                         lottery.getAddress()
