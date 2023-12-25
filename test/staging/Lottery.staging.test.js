@@ -39,7 +39,7 @@ developmentChains.includes(network.name)
                             assert.equal(LotteryState, 0)
                             assert(
                                 winnerEndingBalance >
-                                winnerStartingBalance
+                                winnerStartingBalance + LotteryEntranceFee
                             )
                             assert(endingTimeStamp > startingTimeStamp)
                             resolve()
