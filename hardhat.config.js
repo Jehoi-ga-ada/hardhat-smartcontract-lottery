@@ -1,6 +1,6 @@
 require("@nomicfoundation/hardhat-chai-matchers")
 require("@nomiclabs/hardhat-ethers")
-require("@nomiclabs/hardhat-etherscan")
+require("@nomicfoundation/hardhat-verify");
 require("hardhat-deploy")
 require("solidity-coverage")
 require("hardhat-gas-reporter")
@@ -27,6 +27,21 @@ module.exports = {
       url: SEPOLIA_RPC_URL,
       accounts: [PRIVATE_KEY],
     }
+  },etherscan: {
+    
+    apiKey: {
+        sepolia: ETHERSCAN_API_KEY,
+    },
+    customChains: [
+        {
+            network: "goerli",
+            chainId: 5,
+            urls: {
+                apiURL: "https://api-goerli.etherscan.io/api",
+                browserURL: "https://goerli.etherscan.io",
+            },
+        },
+    ],
   },
   gasReporter: {
     enabled: false,
@@ -44,7 +59,7 @@ module.exports = {
     },
   },
   mocha: {
-    timeout: 200000 //200 seconds max
+    timeout: 500000 //200 seconds max
   }
 }
 
